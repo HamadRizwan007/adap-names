@@ -1,5 +1,7 @@
 import { IllegalArgumentException } from "../common/IllegalArgumentException";
 import { InvalidStateException } from "../common/InvalidStateException";
+import { ServiceFailureException } from "../common/ServiceFailureException";
+import { Exception } from "../common/Exception";
 
 import { Name } from "../names/Name";
 import { Directory } from "./Directory";
@@ -11,7 +13,7 @@ export class Node {
 
     constructor(bn: string, pn: Directory) {
         this.doSetBaseName(bn);
-        this.parentNode = pn; // why oh why do I have to set this
+        this.parentNode = pn;
         this.initialize(pn);
     }
 
@@ -57,7 +59,39 @@ export class Node {
      * @param bn basename of node being searched for
      */
     public findNodes(bn: string): Set<Node> {
-        throw new Error("needs implementation or deletion");
+        // Precondition: basename cannot be null or undefined
+        IllegalArgumentException.assert(
+            bn !== null && bn !== undefined,
+            "basename cannot be null or undefined"
+        );
+
+        try {
+            const result = new Set<Node>();
+            
+            // Check class invariant: basename should not be empty
+            // This will catch the BuggyFile issue
+            const currentBaseName = this.getBaseName();
+            InvalidStateException.assert(
+                currentBaseName !== null && currentBaseName !== undefined,
+                "node has invalid null or undefined basename"
+            );
+            
+            InvalidStateException.assert(
+                currentBaseName !== "",
+                "node has invalid empty basename"
+            );
+            
+            // Check if current node matches
+            if (currentBaseName === bn) {
+                result.add(this);
+            }
+            
+            return result;
+            
+        } catch (ex) {
+            // If something goes wrong, escalate as service failure
+            throw new ServiceFailureException("failed to find nodes", ex as Exception);
+        }
     }
 
 }
